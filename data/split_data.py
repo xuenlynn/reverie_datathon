@@ -2,15 +2,14 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-
+# parsing and cleaning WHOLE DATASET (train, val & test)
 def load_and_clean(path):
     df = pd.read_csv(path, sep='\t')
 
+    df = df.drop_duplicates()
+
     # --- parse dates ---
     df['Dt_Customer'] = pd.to_datetime(df['Dt_Customer'], format='%d-%m-%Y', errors='coerce')
-
-    # --- missing values ---
-    df['Income'] = df['Income'].fillna(df['Income'].median())
 
     # --- clean categorical noise ---
     df['Marital_Status'] = df['Marital_Status'].replace({
@@ -21,17 +20,11 @@ def load_and_clean(path):
         'Graduation': 'Graduate', 'Master': 'Postgraduate', 'PhD': 'Postgraduate'
     })
 
-    # --- outlier removal (BEFORE feature engineering that depends on these cols) ---
+    # --- outlier removal (hardcoded rule, not a statistic) ---
     df['Age'] = 2014 - df['Year_Birth']
     df = df[df['Age'] <= 100]
 
-    Q1, Q3 = df['Income'].quantile([0.25, 0.75])
-    IQR = Q3 - Q1
-    df = df[(df['Income'] >= Q1 - 1.5 * IQR) & (df['Income'] <= Q3 + 1.5 * IQR)]
-
-    # --- feature engineering (now safe — runs on outlier-free data) ---
-    reference_date = df['Dt_Customer'].max()
-    df['Customer_Tenure'] = (reference_date - df['Dt_Customer']).dt.days
+    # --- row-wise feature engineering (safe pre-split: no cross-row statistics) ---
     df['Total_Children'] = df['Kidhome'] + df['Teenhome']
 
     mnt_cols = ['MntWines', 'MntFruits', 'MntMeatProducts', 'MntFishProducts',
@@ -48,23 +41,45 @@ def load_and_clean(path):
     # --- drop unhelpful columns ---
     df = df.drop(columns=['Z_CostContact', 'Z_Revenue'])
 
-    # --- encode (pick ONE education column, not both) ---
+    # --- encode fixed/known categories (safe pre-split: not data-driven) ---
     df = pd.get_dummies(df, columns=['Education_Grouped', 'Marital_Status'], drop_first=True, dtype=int)
 
     return df
 
 
-def split_and_save(df):
+def split_data(df, test_size=0.3, random_state=42):
     # unsupervised: no target, no stratify — but keep a holdout for cluster stability checks
-    train, temp = train_test_split(df, test_size=0.3, random_state=42)
-    val, test = train_test_split(temp, test_size=0.5, random_state=42)
+    # train 0.7 dataset, temp gets split into val and test later on 0.15 each (0.5 of 0.3)
+    train, temp = train_test_split(df, test_size=test_size, random_state=random_state)
+    val, test = train_test_split(temp, test_size=0.5, random_state=random_state)
+    return train, val, test
 
-    train.to_csv('data/processed/train.csv', index=False)
-    val.to_csv('data/processed/val.csv', index=False)
-    test.to_csv('data/processed/test.csv', index=False)
+
+def fit_and_apply_preprocessing(train, val, test):
+    """Learn statistics from train ONLY, apply to all three splits."""
+    income_median = train['Income'].median()
+    reference_date = train['Dt_Customer'].max()   # <-- moved here, train-only
+
+    splits = {}
+    for name, split in [('train', train), ('val', val), ('test', test)]:
+        # use splits to apply the below preprocessing steps to all 3 datasets
+        split = split.copy()
+        split['Income'] = split['Income'].fillna(income_median)
+        split['Customer_Tenure'] = (reference_date - split['Dt_Customer']).dt.days
+        splits[name] = split
+
+    return splits['train'], splits['val'], splits['test']
+
+
+def save_splits(train, val, test, out_dir='data/processed'):
+    train.to_csv(f'{out_dir}/train.csv', index=False)
+    val.to_csv(f'{out_dir}/val.csv', index=False)
+    test.to_csv(f'{out_dir}/test.csv', index=False)
     print(f"Train: {train.shape}, Val: {val.shape}, Test: {test.shape}")
 
 
 if __name__ == '__main__':
     df = load_and_clean('data/raw/marketing_campaign.csv')
-    split_and_save(df)
+    train, val, test = split_data(df)
+    train, val, test = fit_and_apply_preprocessing(train, val, test)
+    save_splits(train, val, test)
