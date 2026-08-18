@@ -59,4 +59,3 @@ if __name__ == '__main__':
 	# X_all = scaler.transform(features) if scaler is not None else features
 	# df['cluster'] = model.predict(X_all)
 	# df.to_csv('data/processed/test_with_clusters.csv', index=False)
-	
