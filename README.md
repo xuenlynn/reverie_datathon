@@ -62,6 +62,40 @@ and place it at `data/raw/marketing_campaign.csv`.
    stability across splits, profiles each cluster, visualizes clusters via
    PCA, and saves the model + scaler to `models/final_model.sav`.
 
+## Usage / Running predictions
+
+After the model is trained, you can use it to predict customer cluster assignments:
+
+**Option 1: Test on a single sample row**
+```bash
+python scripts/test_single.py
+```
+This loads the pre-trained model and scaler, runs a prediction on the sample
+in `data/processed/sample_one_row.csv`, and outputs the cluster label,
+distances to centroids, and approximate cluster probabilities.
+
+**Option 2: Run the prediction demo**
+```bash
+python models/predict_demo.py
+```
+This demonstrates programmatic usage — loads the model and scaler, builds a
+placeholder sample, and runs a prediction. Includes commented examples for
+batch prediction on CSV data.
+
+**Option 3: Load the model programmatically**
+```bash
+python models/loader.py
+```
+This utility loads the model and scaler from `models/final_model.sav` and
+`models/scaler.sav`, validates feature count, and shows how to run predictions
+in Python code.
+
+**Option 4: Inspect the model file**
+```bash
+python models/probe.py
+```
+Diagnose the model file format (joblib or other).
+
 ## Methodology highlights
 
 - **Leakage-safe pipeline:** all data-dependent statistics — `Income` median
