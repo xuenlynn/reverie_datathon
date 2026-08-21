@@ -19,14 +19,27 @@ than a single predictive score.
 ## Repo structure
 
 ```
-reverie_datathon/
-├── eda/
-│   └── 01_eda.ipynb          # exploration only, no modeling
+.
 ├── data/
 │   ├── raw/                  # untouched original CSV
-│   ├── processed/            # train.csv, val.csv, test.csv (generated)
+│   ├── processed/            # generated train, val, and test splits
 │   └── split_data.py         # cleaning, feature engineering, and splitting pipeline
-├── models/                   # final_model.sav (KMeans model + scaler, via joblib)
+├── eda/
+│   └── 01_eda.ipynb          # exploration only, no modeling
+├── models/
+│   ├── final_model.sav       # trained KMeans model
+│   ├── scaler.sav            # fitted StandardScaler
+│   ├── cluster_diagnostics.py
+│   ├── loader.py             # load the model and scaler
+│   ├── predict_demo.py       # programmatic prediction example
+│   └── probe.py              # inspect the saved model format
+├── reports/
+│   ├── cluster_3_rows.csv
+│   ├── cluster_diagnostics.json
+│   ├── cluster_personas.md
+│   └── pca_clusters.png      # generated diagnostics and cluster summaries
+├── scripts/
+│   └── test_single.py        # predict the cluster for one sample row
 ├── training/
 │   └── 01_training.ipynb     # scaling, k selection, final fit, evaluation
 ├── requirements.txt
